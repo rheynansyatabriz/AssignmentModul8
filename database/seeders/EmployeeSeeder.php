@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Employee;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -15,10 +16,17 @@ class EmployeeSeeder extends Seeder
     {
         DB::table('employees')->insert([
             [
+                'firstname' => 'rheynansya ',
+                'lastname' => 'Tabriz',
+                'email'=> 'rheynansya.Tabrizg@gmail.com',
+                'age' => 20,
+                'position_id' => 2
+            ],
+            [
                 'firstname' => 'Purnama',
                 'lastname' => 'Anaking',
                 'email'=> 'purnama.anaking@gmail.com',
-                'age' => 20,
+                'age' => 30,
                 'position_id' => 1
             ],
             [
@@ -36,5 +44,10 @@ class EmployeeSeeder extends Seeder
                 'position_id' => 3
             ],
         ]);
+        Employee::factory()->count(10)->create();
+
     }
+    
+
+
 }
