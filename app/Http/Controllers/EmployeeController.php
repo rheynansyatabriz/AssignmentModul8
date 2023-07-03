@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Position;
-use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
-// use App\Http\Controllers\DB;
-
-
+use App\Models\Employee;
+use App\Models\Position;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeeController extends Controller
 {
@@ -42,6 +40,9 @@ class EmployeeController extends Controller
         return view('employee.create', compact('pageTitle', 'positions'));
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
         $messages = [
@@ -61,13 +62,30 @@ class EmployeeController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
+        // Get File
+        $file = $request->file('cv');
+
+        if ($file != null) {
+            $originalFilename = $file->getClientOriginalName();
+            $encryptedFilename = $file->hashName();
+
+            // Store File
+            $file->store('public/files');
+        }
+
         // ELOQUENT
-        $employee = New Employee;
+        $employee = new Employee;
         $employee->firstname = $request->firstName;
         $employee->lastname = $request->lastName;
         $employee->email = $request->email;
         $employee->age = $request->age;
         $employee->position_id = $request->position;
+
+        if ($file != null) {
+            $employee->original_filename = $originalFilename;
+            $employee->encrypted_filename = $encryptedFilename;
+        }
+
         $employee->save();
 
         return redirect()->route('employees.index');
@@ -100,7 +118,10 @@ class EmployeeController extends Controller
         return view('employee.edit', compact('pageTitle', 'positions', 'employee'));
     }
 
-    public function update(Request $request, string $id)
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
     {
         $messages = [
             'required' => ':Attribute harus diisi.',
@@ -119,30 +140,68 @@ class EmployeeController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // ELOQUENT
         $employee = Employee::find($id);
+
+        if (!$employee) {
+            return redirect()->back()->withError('Data not found');
+        }
+
+        // Update Employee Data
         $employee->firstname = $request->firstName;
         $employee->lastname = $request->lastName;
         $employee->email = $request->email;
         $employee->age = $request->age;
         $employee->position_id = $request->position;
+
+        $file = $request->file('cv');
+
+        if ($file != null) {
+            $originalFilename = $file->getClientOriginalName();
+            $encryptedFilename = $file->hashName();
+
+            // Store File
+            $file->store('public/files');
+
+            // Delete old file if exists
+            if ($employee->encrypted_filename != null) {
+                Storage::delete('public/files/'.$employee->encrypted_filename);
+            }
+
+            // Update Employee File Data
+            $employee->original_filename = $originalFilename;
+            $employee->encrypted_filename = $encryptedFilename;
+        }
+
         $employee->save();
 
         return redirect()->route('employees.index');
     }
 
-
     /**
      * Remove the specified resource from storage.
      */
-
-    public function destroy(string $id)
+    public function destroy($employeeId)
     {
-        // ELOQUENT
-        Employee::find($id)->delete();
+        $employee = Employee::find($employeeId);
+
+        // Delete related file if exists
+        if ($employee->encrypted_filename != null) {
+            Storage::delete('public/files/'.$employee->encrypted_filename);
+        }
+
+        $employee->delete();
 
         return redirect()->route('employees.index');
     }
 
+    public function downloadFile($employeeId)
+    {
+        $employee = Employee::find($employeeId);
+        $encryptedFilename = 'public/files/'.$employee->encrypted_filename;
+        $downloadFilename = Str::lower($employee->firstname.'_'.$employee->lastname.'_cv.pdf');
 
+        if (Storage::exists($encryptedFilename)) {
+            return Storage::download($encryptedFilename, $downloadFilename);
+        }
+    }
 }
