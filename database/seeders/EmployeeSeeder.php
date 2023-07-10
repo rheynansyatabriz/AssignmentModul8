@@ -44,10 +44,10 @@ class EmployeeSeeder extends Seeder
                 'position_id' => 3
             ],
         ]);
-        Employee::factory()->count(10)->create();
+        Employee::factory()->count(200)->create();
 
     }
-    
+
 
 
 }
